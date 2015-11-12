@@ -12,14 +12,24 @@
         android:layout_weight="4"
         android:background="#000"
         >
-        <ImageView 
-            android:id="@+id/CD_img"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:src="@drawable/ic_launcher"
-            
-            />
+     
+      <ImageView
+        android:id="@+id/CD_img"
+        android:layout_width="200dip"
+        android:layout_height="200dip"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="25dip"
+        android:background="@drawable/wangfei"
+        android:contentDescription="@string/picture"/>
+    
+    <ImageView
+        android:id="@+id/music_center"
+        android:layout_width="50dip"
+        android:layout_height="50dip"
+        android:layout_centerHorizontal="true"
+        android:src="@drawable/music"
+        android:layout_marginTop="100dip"
+        android:contentDescription="@string/picture"/>
     </RelativeLayout>
     
     <RelativeLayout 
