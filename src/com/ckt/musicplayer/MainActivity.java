@@ -1,15 +1,20 @@
 package com.ckt.musicplayer;
 
+<<<<<<< HEAD
 import java.util.ArrayList;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+=======
+import android.app.Activity;
+>>>>>>> origin/master
 import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+<<<<<<< HEAD
 import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,10 +40,20 @@ public class MainActivity extends Activity implements OnItemClickListener{
 	private SensorBroadcastReciver sensorBroadcastReciver;
 	private HeadsetPlugReceiver headsetPlugReceiver; 
 	private MediaPlayer mp =null;
+=======
+import android.view.View;
+
+public class MainActivity extends Activity {
+	 HeadsetPlugReceiver headsetPlugReceiver; 
+	 MediaPlayer mp =null;
+>>>>>>> origin/master
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
 		super.onCreate(savedInstanceState);
+		
 		setContentView(R.layout.activity_main);
+<<<<<<< HEAD
 		//查找组件
 		listView = (ListView) findViewById(R.id.listView_music);
 		
@@ -75,8 +90,19 @@ public class MainActivity extends Activity implements OnItemClickListener{
 		  mp.start();
 		Mp3Info tempMp3Info = musicList.get(position);
 		Toast.makeText(this, "你想要播放:"+tempMp3Info.getName()+"?\r\n\r\nno way!!!", Toast.LENGTH_SHORT).show();
+=======
+		registerHeadsetPlugReceiver();  
+>>>>>>> origin/master
 	}
+	
+	  private void registerHeadsetPlugReceiver(){  
+	        headsetPlugReceiver  = new HeadsetPlugReceiver ();  
+	        IntentFilter  filter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);  
+	        filter.addAction("android.intent.action.HEADSET_PLUG");
+	        registerReceiver(headsetPlugReceiver, filter);  
+	    }  
 
+<<<<<<< HEAD
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
@@ -166,4 +192,19 @@ public class MainActivity extends Activity implements OnItemClickListener{
 	}
 
 	
+=======
+	  public void onClick(View v)
+	  {	 mp = MediaPlayer.create(this, R.raw.test);
+		  mp.start();
+	  }
+	@Override  
+	protected void onDestroy() {  
+	    // TODO Auto-generated method stub  
+	    super.onDestroy();  
+	    unregisterReceiver();  //注销监听  
+	}  
+	private void unregisterReceiver(){  
+	    this.unregisterReceiver(headsetPlugReceiver);  
+	}  
+>>>>>>> origin/master
 }
