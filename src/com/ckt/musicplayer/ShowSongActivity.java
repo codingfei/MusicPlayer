@@ -76,8 +76,6 @@ public class ShowSongActivity extends Activity implements OnItemClickListener{
 	@Override
 	public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
 		// TODO Auto-generated method stub
-		mp = MediaPlayer.create(this, R.raw.test);
-		  mp.start();
 		Mp3Info tempMp3Info = musicList.get(position);
 		Toast.makeText(this, "ÄãÏëÒª²¥·Å:"+tempMp3Info.getName()+"?\r\n\r\nno way!!!", Toast.LENGTH_SHORT).show();
 
