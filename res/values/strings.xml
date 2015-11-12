@@ -3,6 +3,8 @@
 
     <string name="app_name">MusicPlayer</string>
     <string name="action_settings">Settings</string>
-    <string name="hello_world">Hello world!</string>
+    <string name="music_name">music_name</string>
+    <string name="music_CD">music_CD</string>
+    <string name="music_singer">music_singer</string>
 
 </resources>
