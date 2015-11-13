@@ -2,6 +2,8 @@ package com.ckt.musicplayer;
 
 import java.util.ArrayList;
 
+import android.animation.ValueAnimator;
+import android.animation.ValueAnimator.AnimatorUpdateListener;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -17,11 +19,10 @@ import android.graphics.drawable.BitmapDrawable;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.view.View;
 import android.view.Window;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.view.animation.LinearInterpolator;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -50,6 +51,9 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
     private AudioManager audioMgr = null; // Audio管理器，用了控制音量
     private ArrayList<Mp3Info> musicList; // 音乐列表
     private Mp3Info currentSong;
+    private ValueAnimator valueAnimator=null;
+    float value=0;
+    private Handler handler = new Handler();
  	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -70,6 +74,10 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 		play_but = (ImageButton)findViewById(R.id.play_btn);
 		list_but.setOnClickListener(this);
 		play_but.setOnClickListener(this);
+		Bitmap bit = BitmapFactory.decodeResource(getResources(),
+				R.drawable.wangfei);
+		cd_view.setBackground(new BitmapDrawable(getCircleBitmap(this, bit,
+				200)));
 	}
 
 	@Override
@@ -84,79 +92,75 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 		}
 	}
 
+
 	@Override
 	public void onClick(View v) {
 		// TODO Auto-generated method stub
-		switch(v.getId())
-		{
-//		打开歌曲列表
-			case R.id.list_btn:
-				Intent intent = new Intent(MainActivity.this,
-				ShowSongActivity.class);
-				intent.putExtra("list", JsonUtils.changeListToJsonObj(musicList)); //启动Activity并把歌曲列表传过去
-				startActivityForResult(intent, 1111);  //这里要用startActivityForResult
-				break;
+		switch (v.getId()) {
+		// 打开歌曲列表
+		case R.id.list_btn:
+			Intent intent = new Intent(MainActivity.this,
+					ShowSongActivity.class);
+			intent.putExtra("list", JsonUtils.changeListToJsonObj(musicList)); //启动Activity并把歌曲列表传过去
+			startActivityForResult(intent, 1111);  //这里要用startActivityForResult
+			break;
 
-
-			case R.id.play_btn:
-//				播放CD旋转动画
-				 Bitmap bit = BitmapFactory.decodeResource(getResources(), R.drawable.wangfei);
-				 cd_view.setBackground(new BitmapDrawable(getCircleBitmap(this, bit, 200)));
-				 Animation anim = AnimationUtils.loadAnimation(MainActivity.this, R.anim.my_rotate);
-					LinearInterpolator lir = new LinearInterpolator();
-					anim.setInterpolator(lir);
-					cd_view.startAnimation(anim);
-					Animation anim_1 = AnimationUtils.loadAnimation(MainActivity.this, R.anim.my_rotate_2);
-					LinearInterpolator lir_1 = new LinearInterpolator();
-					anim.setInterpolator(lir_1);
-					center_view.startAnimation(anim_1);
-//					播放音乐
-//					String path="/data/data/com.ckt.anothermusicplayer/music.mp3";
-					//File file =new File(path, "music.mp3");
-//					try {
-////						mPlayer.setDataSource(path);
-//						mPlayer = MediaPlayer.create(this, R.raw.test);
-//						mPlayer.prepare();				
-//					} catch (Exception e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					} 
-//					if (mPlayer != null) {
-//						if (mPlayer.isPlaying()) {
-//							mPlayer.pause();
-//							LogUtil.v("MainActivity", "pause");
-//						}else {
-//							mPlayer.start();
-//							circle_progress.start();
-//							LogUtil.v("MainActivity", "start");
-//						}
-//					}else {
-//						LogUtil.v("MainActivity", "MusicPlayerIsNull");
-//					}
-					try {
-						int state = mBinder.getPlayerState();
-						if (state == 0) { // 停止 ----> 播放
-							mPlayer.reset();
-							mPlayer.setDataSource(musicList.get(0).getPath());
-							mPlayer.prepare();
-							mPlayer.start();
-//							circle_progress.setMax((int)currentSong.getDuring());
-							circle_progress.start();
-							state = 1;
-						} else if (state == 1) { // 播放--->暂停
-							mPlayer.pause();
-							circle_progress.stop();
-							state = 2;
-						} else { // 暂停---->播放
-							mPlayer.start();
-							circle_progress.start();
-							state = 1;
-						}
-						mBinder.setPlayerState(state);
-					} catch (Exception e) {
-					}
+		case R.id.play_btn:
+			// 播放CD旋转动画
+			
+			/*Animation anim = AnimationUtils.loadAnimation(MainActivity.this,
+					R.anim.my_rotate);
+			LinearInterpolator lir = new LinearInterpolator();
+			anim.setInterpolator(lir);
+			cd_view.startAnimation(anim);
+			Animation anim_1 = AnimationUtils.loadAnimation(MainActivity.this,
+					R.anim.my_rotate_2);
+			LinearInterpolator lir_1 = new LinearInterpolator();
+			anim.setInterpolator(lir_1);
+			center_view.startAnimation(anim_1);*/
+			if(valueAnimator == null) {
+				valueAnimator = ValueAnimator.ofFloat(360);
+				LinearInterpolator lir = new LinearInterpolator();
+				valueAnimator.setInterpolator(lir);
+				valueAnimator.setRepeatCount(-1);
+		        valueAnimator.setDuration(20000).addUpdateListener(new AnimatorUpdateListener() {
 					
+					@Override
+					public void onAnimationUpdate(ValueAnimator animation) {
+						// TODO Auto-generated method stub
+						cd_view.setRotation((Float) animation.getAnimatedValue()+value);	
+					}
+				});
 			}
+	     
+			// 播放音乐
+			try {
+				int state = mBinder.getPlayerState();
+				if (state == 0) { // 停止 ----> 播放
+					mPlayer.reset();
+					mPlayer.setDataSource(musicList.get(0).getPath());
+					mPlayer.prepare();
+					mPlayer.start();
+//					valueAnimator.setFloatValues(value);
+					valueAnimator.start();
+					circle_progress.start();
+					state = 1;
+				} else if (state == 1) { // 播放--->暂停
+					mPlayer.pause();
+					valueAnimator.cancel();
+					circle_progress.stop();
+					value = cd_view.getRotation();
+					state = 2;
+				} else { // 暂停---->播放
+					mPlayer.start();
+					valueAnimator.start();
+					circle_progress.start();
+					state = 1;
+				}
+				mBinder.setPlayerState(state);
+			} catch (Exception e) {
+			}
+		}
 	}
 
 	public static Bitmap getCircleBitmap(Context context, Bitmap src, float radius) {  
@@ -197,7 +201,32 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 		// TODO Auto-generated method stub
 		LogUtil.v("MainActivity", "onServiceDisconnected");
 	}
-	
+	@Override
+	protected void onPause() {
+		// TODO Auto-generated method stub
+		if(valueAnimator!=null) {
+			valueAnimator.cancel();
+			value = cd_view.getRotation();
+		}
+		super.onPause();
+	}
+	@Override
+	protected void onResume() {
+		// TODO Auto-generated method stub
+		if(valueAnimator != null) {
+			if(mPlayer.isPlaying()) {
+				handler.postDelayed(new Runnable() {
+					
+					@Override
+					public void run() {
+						// TODO Auto-generated method stub
+						valueAnimator.start();
+					}
+				}, 500);
+			}
+		}
+		super.onResume();
+	}
 	@Override
 	protected void onDestroy() {
 		// TODO Auto-generated method stub

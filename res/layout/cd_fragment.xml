@@ -26,7 +26,6 @@
         android:layout_centerHorizontal="true"
         android:src="@drawable/music"
         android:layout_marginTop="155dip"
-        android:background="@android:color/black"
         android:contentDescription="@string/picture"/>
 
 </RelativeLayout>
