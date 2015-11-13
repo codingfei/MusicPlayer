@@ -83,16 +83,19 @@
         android:layout_weight="2"
         android:orientation="vertical" >
 
-        <SeekBar
-            android:id="@+id/voice_seekbar"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="2"
-            android:layout_gravity="center"
-            android:layout_marginLeft="10dip"
-            android:layout_marginRight="10dip"
-            android:max="100"
-            android:progress="30" />
+       <SeekBar 
+                android:id="@+id/voice_seekbar"
+                android:layout_centerHorizontal="true"
+                android:layout_marginLeft="20dp"
+                android:layout_marginRight="20dp"
+                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:maxHeight="5dp"
+                android:max="100"
+                android:progressDrawable="@drawable/seek_bar_bg"
+                android:thumb="@drawable/seekbar_thumb"
+                android:progress="30"
+                />
 
         <LinearLayout 
             android:id="@+id/menu_bottom"

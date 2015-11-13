@@ -5,9 +5,11 @@ import java.util.ArrayList;
 import android.animation.ValueAnimator;
 import android.animation.ValueAnimator.AnimatorUpdateListener;
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -21,12 +23,15 @@ import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.animation.LinearInterpolator;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
 
 import com.ckt.modle.LogUtil;
 import com.ckt.modle.Mp3Info;
@@ -34,7 +39,7 @@ import com.ckt.ui.CustomProgressBar;
 import com.ckt.utils.JsonUtils;
 import com.ckt.utils.MusicPlayerService;
 
-public class MainActivity extends Activity implements View.OnClickListener,ServiceConnection{
+public class MainActivity extends Activity implements View.OnClickListener,ServiceConnection,OnSeekBarChangeListener{
 //列表按钮
 	private ImageButton list_but = null;
 //	播放按钮
@@ -47,8 +52,13 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 	private CustomProgressBar circle_progress = null;
 	private ProgressBar sound_progress = null;
 	private MusicPlayerService.MusicPlayerBinder mBinder;  
-    private MediaPlayer mediaPlayer = null;// 播放器       
-    private AudioManager audioMgr = null; // Audio管理器，用了控制音量
+    private MediaPlayer mediaPlayer = null;// 播放器
+    
+    private SeekBar seekbar_voice;
+	private boolean isAllowChangeVoice=false;  //设置拖动seekbar时的互斥量
+	private boolean isUserChangingVoice=false;  //表示当前是否是我们自己在改变音量--->这个时候就不要理会系统音量改变的广播了,不然会出现一些小问题
+    private AudioManager mAudioManager = null; // Audio管理器，用了控制音量
+    
     private ArrayList<Mp3Info> musicList; // 音乐列表
     private Mp3Info currentSong;
     private ValueAnimator valueAnimator=null;
@@ -67,17 +77,30 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 		
 		cd_view = (ImageView)findViewById(R.id.CD_img);
 		circle_progress = (CustomProgressBar)findViewById(R.id.circle_pro);
-
+		mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 //		sound_progress = (ProgressBar)findViewById(R.id.sound_progress);
 		center_view = (ImageView)findViewById(R.id.music_center);
 		list_but = (ImageButton)findViewById(R.id.list_btn);
 		play_but = (ImageButton)findViewById(R.id.play_btn);
+		seekbar_voice = (SeekBar) findViewById(R.id.voice_seekbar);
 		list_but.setOnClickListener(this);
 		play_but.setOnClickListener(this);
 		Bitmap bit = BitmapFactory.decodeResource(getResources(),
 				R.drawable.wangfei);
 		cd_view.setBackground(new BitmapDrawable(getCircleBitmap(this, bit,
 				200)));
+		
+		//初始化voice_seekbar:
+				seekbar_voice.setOnSeekBarChangeListener(this);
+				int maxV = mAudioManager.getStreamMaxVolume( AudioManager.STREAM_MUSIC );
+				int currentV = mAudioManager.getStreamVolume( AudioManager.STREAM_MUSIC );
+				seekbar_voice.setMax(maxV*10); //为什么要放大十倍???---->因为max值一般是10多,太小了,拖动seekbar的时候明显感觉不爽
+				seekbar_voice.setProgress(currentV*10);
+				
+				//注册监听--->监听系统音量的改变
+				IntentFilter filter = new IntentFilter() ;
+		        filter.addAction("android.media.VOLUME_CHANGED_ACTION") ;
+		        registerReceiver(new MyVolumeReceiver(), filter) ;
 	}
 
 	@Override
@@ -236,5 +259,73 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 //		stopService(stopServiceIntent);
 		LogUtil.v("MainActivity", "onDestory");
 	}
+	
+	@Override
+	public boolean onKeyDown(int keyCode, KeyEvent event) {
+		// TODO Auto-generated method stub
+		switch (keyCode) {
+		case KeyEvent.KEYCODE_VOLUME_UP:  //拦截音量+按键--->避免出现系统的音量改变对话框
+			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
+				     AudioManager.ADJUST_RAISE, AudioManager.FLAG_PLAY_SOUND);
+			return true;
+		case KeyEvent.KEYCODE_VOLUME_DOWN: //拦截音量-按键--->避免出现系统的音量改变对话框
+			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
+				     AudioManager.ADJUST_LOWER, AudioManager.FLAG_PLAY_SOUND);
+			return true;
 
+		default:
+			break;
+		}
+		return super.onKeyDown(keyCode, event);
+	}
+	
+	@Override
+	public void onProgressChanged(SeekBar seekBar, final int progress,
+			boolean fromUser) {
+		// TODO Auto-generated method stub
+		if(!isAllowChangeVoice)return;  //还不允许改变系统音量
+		handler.post(new Runnable() {
+			
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				isAllowChangeVoice =false;
+				mAudioManager.setStreamVolume(
+						AudioManager.STREAM_MUSIC, 
+						progress/10, 
+						AudioManager.FLAG_PLAY_SOUND);
+				/*mAudioManager.setStreamVolume(
+						AudioManager.STREAM_MUSIC, 
+						progress, 
+						AudioManager.FLAG_PLAY_SOUND | AudioManager.FLAG_SHOW_UI);*/
+				
+				isAllowChangeVoice = true;
+			}
+		});
+	}
+
+	@Override
+	public void onStartTrackingTouch(SeekBar arg0) {
+		// TODO Auto-generated method stub
+		isAllowChangeVoice = true;
+		isUserChangingVoice = true;
+	}
+
+	@Override
+	public void onStopTrackingTouch(SeekBar arg0) {
+		// TODO Auto-generated method stub
+		isUserChangingVoice = false;
+	}
+	class MyVolumeReceiver extends BroadcastReceiver{
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            //如果音量发生变化则更改seekbar的位置
+            if(intent.getAction().equals("android.media.VOLUME_CHANGED_ACTION")){
+                int currVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC) ;// 当前的媒体音量
+                if(!isUserChangingVoice) {
+                	seekbar_voice.setProgress(currVolume*10);  //改变seekbar的位置
+                }
+            }
+        }
+    }
 }
