@@ -32,18 +32,24 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
+import android.widget.Toast;
 
 import com.ckt.modle.LogUtil;
 import com.ckt.modle.Mp3Info;
 import com.ckt.ui.CustomProgressBar;
 import com.ckt.utils.JsonUtils;
-import com.ckt.utils.MusicPlayerService;
 
 public class MainActivity extends Activity implements View.OnClickListener,ServiceConnection,OnSeekBarChangeListener{
 //列表按钮
 	private ImageButton list_but = null;
 //	播放按钮
 	private ImageButton play_but =null;
+	
+	private ImageButton next_but;
+
+	private ImageButton pre_but;
+
+	private ImageButton menu_but;
 //	cd与中间镂空控件
 	private ImageView cd_view = null;
 	private ImageView center_view =null;
@@ -64,6 +70,7 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
     private ValueAnimator valueAnimator=null;
     float value=0;
     private Handler handler = new Handler();
+    
  	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -80,10 +87,22 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 		mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 //		sound_progress = (ProgressBar)findViewById(R.id.sound_progress);
 		center_view = (ImageView)findViewById(R.id.music_center);
-		list_but = (ImageButton)findViewById(R.id.list_btn);
+		//添加主界面布局控件的点击响应
+		//---播放/暂停按钮---//
 		play_but = (ImageButton)findViewById(R.id.play_btn);
-		seekbar_voice = (SeekBar) findViewById(R.id.voice_seekbar);
+		//---下一首歌按钮---//
+		next_but = (ImageButton)findViewById(R.id.next_btn);
+		next_but.setOnClickListener(this);
+		//---上一首歌按钮---//
+		pre_but = (ImageButton)findViewById(R.id.pre_btn);
+		pre_but.setOnClickListener(this);
+		// ---歌曲列表按钮---//
+		list_but = (ImageButton)findViewById(R.id.list_btn);
 		list_but.setOnClickListener(this);
+		// ---关闭按钮---//
+		menu_but = (ImageButton)findViewById(R.id.menu_btn);
+		menu_but.setOnClickListener(this);
+		seekbar_voice = (SeekBar) findViewById(R.id.voice_seekbar);
 		play_but.setOnClickListener(this);
 		Bitmap bit = BitmapFactory.decodeResource(getResources(),
 				R.drawable.wangfei);
@@ -156,33 +175,55 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 				});
 			}
 	     
-			// 播放音乐
-			try {
-				int state = mBinder.getPlayerState();
-				if (state == 0) { // 停止 ----> 播放
-					mPlayer.reset();
-					mPlayer.setDataSource(musicList.get(0).getPath());
-					mPlayer.prepare();
-					mPlayer.start();
-//					valueAnimator.setFloatValues(value);
-					valueAnimator.start();
-					circle_progress.start();
-					state = 1;
-				} else if (state == 1) { // 播放--->暂停
-					mPlayer.pause();
-					valueAnimator.cancel();
-					circle_progress.stop();
-					value = cd_view.getRotation();
-					state = 2;
-				} else { // 暂停---->播放
-					mPlayer.start();
-					valueAnimator.start();
-					circle_progress.start();
-					state = 1;
-				}
-				mBinder.setPlayerState(state);
-			} catch (Exception e) {
-			}
+			Mp3Info mp3 = (Mp3Info) mBinder.getMusicList().toArray()[0];
+			mBinder.playOrPauseMusic(mPlayer, mp3);
+			valueAnimator.start();
+			circle_progress.start();
+//			// 播放音乐
+//			try {
+//				int state = mBinder.getPlayerState();
+//				if (state == 0) { // 停止 ----> 播放
+//					mPlayer.reset();
+//					mPlayer.setDataSource(musicList.get(0).getPath());
+//					mPlayer.prepare();
+//					mPlayer.start();
+////					valueAnimator.setFloatValues(value);
+//					valueAnimator.start();
+//					circle_progress.start();
+//					state = 1;
+//				} else if (state == 1) { // 播放--->暂停
+//					mPlayer.pause();
+//					valueAnimator.cancel();
+//					circle_progress.stop();
+//					value = cd_view.getRotation();
+//					state = 2;
+//				} else { // 暂停---->播放
+//					mPlayer.start();
+//					valueAnimator.start();
+//					circle_progress.start();
+//					state = 1;
+//				}
+//				mBinder.setPlayerState(state);
+//			} catch (Exception e) {
+//			}
+			break;
+		case R.id.next_btn:
+			mBinder.playNextMusic(MusicPlayerService.PLAYORDER_ORDER);
+			break;
+		case R.id.pre_btn:
+			mBinder.playPreviousMusic(MusicPlayerService.PLAYORDER_ORDER);
+			break;
+		case R.id.menu_btn:
+			//关闭MainActivity
+			Toast.makeText(this, "关闭", Toast.LENGTH_SHORT).show();
+			finish();
+			//终止服务
+			Intent stopServiceIntent = new Intent(this,MusicPlayerService.class);
+			stopService(stopServiceIntent);
+			
+			break;
+		default:
+			break;
 		}
 	}
 
@@ -215,7 +256,7 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 		// TODO Auto-generated method stub
 		mBinder = (MusicPlayerService.MusicPlayerBinder)service;
 		mPlayer = mBinder.getMusicPlayer();
-		this.musicList = mBinder.getMusicList();
+		musicList = (ArrayList<Mp3Info>) mBinder.getMusicList();
 		LogUtil.v("MainActivity", "onServiceConnected");
 	}
 
