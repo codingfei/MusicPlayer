@@ -34,12 +34,18 @@ public class MusicPlayerService extends Service {
 	public static final int PLAYORDER = PLAYORDER_ORDER;
 
 	private List<Mp3Info> mp3InfoList;
-	
+	private int playerState = 0;
 	public class MusicPlayerBinder extends Binder {
 
 		// 获取音乐播放器
 		public MediaPlayer getMusicPlayer() {
 			return mPlayer;
+		}
+		public int getPlayerState() {
+			return playerState;
+		}
+		public void setPlayerState(int state) {
+			playerState = state;
 		}
 		//获取列表
 		public List<Mp3Info> getMusicList() {

@@ -23,6 +23,7 @@ import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
@@ -70,6 +71,7 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
     private ValueAnimator valueAnimator=null;
     float value=0;
     private Handler handler = new Handler();
+    private int state = 1;
     
  	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -177,35 +179,29 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 	     
 			Mp3Info mp3 = (Mp3Info) mBinder.getMusicList().toArray()[0];
 			mBinder.playOrPauseMusic(mPlayer, mp3);
-			valueAnimator.start();
 			circle_progress.start();
-//			// ≤•∑≈“Ù¿÷
-//			try {
-//				int state = mBinder.getPlayerState();
-//				if (state == 0) { // Õ£÷π ----> ≤•∑≈
-//					mPlayer.reset();
-//					mPlayer.setDataSource(musicList.get(0).getPath());
-//					mPlayer.prepare();
-//					mPlayer.start();
-////					valueAnimator.setFloatValues(value);
-//					valueAnimator.start();
-//					circle_progress.start();
-//					state = 1;
-//				} else if (state == 1) { // ≤•∑≈--->‘›Õ£
-//					mPlayer.pause();
-//					valueAnimator.cancel();
-//					circle_progress.stop();
-//					value = cd_view.getRotation();
-//					state = 2;
-//				} else { // ‘›Õ£---->≤•∑≈
-//					mPlayer.start();
-//					valueAnimator.start();
-//					circle_progress.start();
-//					state = 1;
-//				}
-//				mBinder.setPlayerState(state);
-//			} catch (Exception e) {
-//			}
+			// ≤•∑≈“Ù¿÷
+			try {
+				int state = mBinder.getPlayerState();
+				if (state == 0) { 
+					valueAnimator.start();
+					state = 1;
+					Log.d("test", state+"");
+				} else if (state == 1) {
+					valueAnimator.cancel();
+					value = cd_view.getRotation();
+					state = 2;
+					Log.d("test", state+"");
+				} else if(state == 2){ 
+					valueAnimator.start();
+					state = 1;
+					Log.d("test", state+"");
+				}
+				mBinder.setPlayerState(state);
+				Log.d("test", mBinder+"-----"+state+"");
+			} catch (Exception e) {
+			}
+			
 			break;
 		case R.id.next_btn:
 			mBinder.playNextMusic(MusicPlayerService.PLAYORDER_ORDER);
