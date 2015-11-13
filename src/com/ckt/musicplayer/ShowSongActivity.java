@@ -27,6 +27,7 @@ import android.widget.Toast;
 
 import com.ckt.modle.Mp3Info;
 import com.ckt.utils.HeadsetPlugReceiver;
+import com.ckt.utils.JsonUtils;
 import com.ckt.utils.Mp3FileUtil;
 import com.ckt.utils.SensorUtils;
 
@@ -41,6 +42,7 @@ public class ShowSongActivity extends Activity implements OnItemClickListener{
 	private HeadsetPlugReceiver headsetPlugReceiver; 
 	private MediaPlayer mp =null;
 
+	public static final int RESULT_CODE = 10086;
 
 
 	@Override
@@ -53,9 +55,15 @@ public class ShowSongActivity extends Activity implements OnItemClickListener{
 		//查找组件
 		listView = (ListView) findViewById(R.id.listView_music);
 		
-		//读取音乐列表---->需要权限:<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-		//其实这里应该开个线程的
-		this.musicList = Mp3FileUtil.getMp3InfoList(this);
+		//获取音乐列表
+		Intent it = getIntent();
+		if(it!=null) {
+			musicList = JsonUtils.resolveJsonToList(it.getStringExtra("list"));
+		}else {
+			musicList = new ArrayList<Mp3Info>();
+		}
+		
+
 		System.out.println("音乐个数:"+this.musicList.size());
 		
 		//绑定listview显示的数据,及设置item点击的监听
@@ -77,10 +85,14 @@ public class ShowSongActivity extends Activity implements OnItemClickListener{
 	public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
 		// TODO Auto-generated method stub
 		Mp3Info tempMp3Info = musicList.get(position);
-		Toast.makeText(this, "你想要播放:"+tempMp3Info.getName()+"?\r\n\r\nno way!!!", Toast.LENGTH_SHORT).show();
-
-		registerHeadsetPlugReceiver();  
-
+		Toast.makeText(this, "你想要播放:"+tempMp3Info.getName()+"?\r\n\r\nno way!!!"+position, Toast.LENGTH_SHORT).show();
+		
+		registerHeadsetPlugReceiver();  //这是什么?????
+		
+		Intent data = new Intent();
+		data.putExtra("position", position);
+		setResult(RESULT_CODE, data);  //在MainActivity里的onActivityResult()里面接收
+		finish();
 	}
 	
 	  private void registerHeadsetPlugReceiver(){  
@@ -97,6 +109,7 @@ public class ShowSongActivity extends Activity implements OnItemClickListener{
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
+	
 	
 	@Override
 	protected void onDestroy() {

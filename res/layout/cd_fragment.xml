@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" 
+    android:background="#000">
+
+     <com.ckt.ui.CustomProgressBar
+	     android:id="@+id/circle_pro"
+	     android:layout_centerHorizontal="true"
+	     android:layout_width="250dp"
+	     android:layout_marginTop="60dip"
+	     android:layout_height="250dp"/>
+      <ImageView
+        android:id="@+id/CD_img"
+        android:layout_width="200dip"
+        android:layout_height="200dip"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="85dip"
+        android:background="@drawable/wangfei"
+        android:contentDescription="@string/picture"/>
+    
+      <ImageView
+        android:id="@+id/music_center"
+        android:layout_width="50dip"
+        android:layout_height="50dip"
+        android:layout_centerHorizontal="true"
+        android:src="@drawable/music"
+        android:layout_marginTop="155dip"
+        android:background="@android:color/black"
+        android:contentDescription="@string/picture"/>
+
+</RelativeLayout>

@@ -1,5 +1,7 @@
 package com.ckt.musicplayer;
 
+import java.util.ArrayList;
+
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -12,6 +14,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -22,8 +25,12 @@ import android.view.animation.AnimationUtils;
 import android.view.animation.LinearInterpolator;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 
 import com.ckt.modle.LogUtil;
+import com.ckt.modle.Mp3Info;
+import com.ckt.ui.CustomProgressBar;
+import com.ckt.utils.JsonUtils;
 import com.ckt.utils.MusicPlayerService;
 
 public class MainActivity extends Activity implements View.OnClickListener,ServiceConnection{
@@ -35,23 +42,46 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 	private ImageView cd_view = null;
 	private ImageView center_view =null;
 	private MediaPlayer mPlayer;
-	
-	private MusicPlayerService.MusicPlayerBinder mBinder;
+//	歌曲进度显示控件
+	private CustomProgressBar circle_progress = null;
+	private ProgressBar sound_progress = null;
+	private MusicPlayerService.MusicPlayerBinder mBinder;  
+    private MediaPlayer mediaPlayer = null;// 播放器       
+    private AudioManager audioMgr = null; // Audio管理器，用了控制音量
+    private ArrayList<Mp3Info> musicList; // 音乐列表
+    private Mp3Info currentSong;
  	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		setContentView(R.layout.activity_main);
+		
 		Intent startServiceIntent = new Intent(this,MusicPlayerService.class);
 		startService(startServiceIntent);
 		Intent bindIntent = new Intent(this,MusicPlayerService.class);
 		bindService(bindIntent,this, BIND_AUTO_CREATE);
+		
 		cd_view = (ImageView)findViewById(R.id.CD_img);
+		circle_progress = (CustomProgressBar)findViewById(R.id.circle_pro);
+
+//		sound_progress = (ProgressBar)findViewById(R.id.sound_progress);
 		center_view = (ImageView)findViewById(R.id.music_center);
 		list_but = (ImageButton)findViewById(R.id.list_btn);
 		play_but = (ImageButton)findViewById(R.id.play_btn);
 		list_but.setOnClickListener(this);
 		play_but.setOnClickListener(this);
+	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		if (resultCode == ShowSongActivity.RESULT_CODE) { // 返回了点击的歌曲的index
+			int index = data.getIntExtra("position", -1);
+			currentSong = musicList.get(0);
+			if (index >= 0) {// 这里面做相关的响应---->播放第index首歌
+				LogUtil.v("MusicPlayerService", "用户点击播放:" + index);
+				currentSong = musicList.get(index);
+			}
+		}
 	}
 
 	@Override
@@ -61,9 +91,12 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 		{
 //		打开歌曲列表
 			case R.id.list_btn:
-				Intent intent=new Intent(MainActivity.this,ShowSongActivity.class); 
-				startActivity(intent);
+				Intent intent = new Intent(MainActivity.this,
+				ShowSongActivity.class);
+				intent.putExtra("list", JsonUtils.changeListToJsonObj(musicList)); //启动Activity并把歌曲列表传过去
+				startActivityForResult(intent, 1111);  //这里要用startActivityForResult
 				break;
+
 
 			case R.id.play_btn:
 //				播放CD旋转动画
@@ -80,27 +113,50 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 //					播放音乐
 //					String path="/data/data/com.ckt.anothermusicplayer/music.mp3";
 					//File file =new File(path, "music.mp3");
+//					try {
+////						mPlayer.setDataSource(path);
+//						mPlayer = MediaPlayer.create(this, R.raw.test);
+//						mPlayer.prepare();				
+//					} catch (Exception e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					} 
+//					if (mPlayer != null) {
+//						if (mPlayer.isPlaying()) {
+//							mPlayer.pause();
+//							LogUtil.v("MainActivity", "pause");
+//						}else {
+//							mPlayer.start();
+//							circle_progress.start();
+//							LogUtil.v("MainActivity", "start");
+//						}
+//					}else {
+//						LogUtil.v("MainActivity", "MusicPlayerIsNull");
+//					}
 					try {
-//						mPlayer.setDataSource(path);
-						mPlayer = MediaPlayer.create(this, R.raw.test);
-						mPlayer.prepare();				
-					} catch (Exception e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					} 
-					if (mPlayer != null) {
-						if (mPlayer.isPlaying()) {
-							mPlayer.pause();
-							LogUtil.v("MainActivity", "pause");
-						}else {
+						int state = mBinder.getPlayerState();
+						if (state == 0) { // 停止 ----> 播放
+							mPlayer.reset();
+							mPlayer.setDataSource(musicList.get(0).getPath());
+							mPlayer.prepare();
 							mPlayer.start();
-							LogUtil.v("MainActivity", "start");
+//							circle_progress.setMax((int)currentSong.getDuring());
+							circle_progress.start();
+							state = 1;
+						} else if (state == 1) { // 播放--->暂停
+							mPlayer.pause();
+							circle_progress.stop();
+							state = 2;
+						} else { // 暂停---->播放
+							mPlayer.start();
+							circle_progress.start();
+							state = 1;
 						}
-					}else {
-						LogUtil.v("MainActivity", "MusicPlayerIsNull");
+						mBinder.setPlayerState(state);
+					} catch (Exception e) {
 					}
-		}
-		
+					
+			}
 	}
 
 	public static Bitmap getCircleBitmap(Context context, Bitmap src, float radius) {  
@@ -132,6 +188,7 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 		// TODO Auto-generated method stub
 		mBinder = (MusicPlayerService.MusicPlayerBinder)service;
 		mPlayer = mBinder.getMusicPlayer();
+		this.musicList = mBinder.getMusicList();
 		LogUtil.v("MainActivity", "onServiceConnected");
 	}
 
@@ -150,4 +207,5 @@ public class MainActivity extends Activity implements View.OnClickListener,Servi
 //		stopService(stopServiceIntent);
 		LogUtil.v("MainActivity", "onDestory");
 	}
+
 }
