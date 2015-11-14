@@ -1,9 +1,7 @@
 package com.ckt.ui;
 
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -20,6 +18,8 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 
+import com.ckt.modle.LogUtil;
+
 
 
 /**
@@ -27,6 +27,13 @@ import android.view.View;
  */
 public class CustomProgressBar extends View {
 
+	private float downX;
+	private float downY;
+	private float downMinR;  //down点击事件有效的最小半径
+	private float downMaxR;  //down点击事件有效的最大半径
+	private boolean isDown = false;
+	private OnCircleProgressBarDragListener dragListener;  //拖拽进度条时的回调监听
+	private boolean isDraging=false;
     /**
      * Rect for get time height and width
      */
@@ -179,8 +186,8 @@ public class CustomProgressBar extends View {
     /**
      * Color code for progress left.
      */
-    private int mProgressEmptyColor = 0x20FFFFFF;
-
+//    private int mProgressEmptyColor = 0x20FFFFFF;
+    private int mProgressEmptyColor = 0x6ccc;
     /**
      * Color code for progress loaded.
      */
@@ -399,6 +406,10 @@ public class CustomProgressBar extends View {
                 (int) (mCenterY + mButtonRadius));
 
         createShader();
+        
+        //计算一下点击事件有效的范围
+        downMaxR = rectF.width()/2+mPaintProgressEmpty.getStrokeWidth()+15;
+        downMinR = rectF.width()/2-30;
 
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }
@@ -411,7 +422,7 @@ public class CustomProgressBar extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-
+        LogUtil.v("MusicPlayerService", "circleUI:onDraw-->max:"+maxProgress+" current:"+currentProgress);
         if (mShader == null)
             return;
         if(mProgressVisibility){
@@ -559,35 +570,6 @@ public class CustomProgressBar extends View {
      */
    
     /**
-     * This is detect when mButtonRegion is clicked. Which means
-     * play/pause action happened.
-     *
-     * @param event
-     * @return
-     */
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-
-        float x = event.getX();
-        float y = event.getY();
-
-        switch (event.getAction()) {
-            case MotionEvent.ACTION_DOWN: {
-                return true;
-            }
-            case MotionEvent.ACTION_UP: {
-                if (mButtonRegion.contains((int) x, (int) y)) {
-                    if (onClickListener != null)
-                        onClickListener.onClick(this);
-                }
-            }
-            break;
-        }
-
-        return super.onTouchEvent(event);
-    }
-
-    /**
      * onClickListener.onClick will be called when button clicked.
      * We dont want all view click. We only want button area click.
      * That is why we override it.
@@ -663,10 +645,15 @@ public class CustomProgressBar extends View {
      * @param currentProgress
      */
     public void setProgress(int currentProgress){
-        if(0 <= currentProgress  && currentProgress<= maxProgress){
-            this.currentProgress = currentProgress;
-            postInvalidate();
+        if(isDraging) return;
+        if(currentProgress<0) {
+        	this.currentProgress = 0;
+        }else if(currentProgress>maxProgress) {
+        	this.currentProgress = maxProgress;
+        }else {
+        	this.currentProgress = currentProgress;
         }
+        postInvalidate();
     }
 
     /**
@@ -720,7 +707,7 @@ public class CustomProgressBar extends View {
      * @return
      */
     private int calculatePastProgressDegree(){
-        return (250 * currentProgress) / maxProgress;
+        return (360*currentProgress/maxProgress);
     }
 
     /**
@@ -746,4 +733,128 @@ public class CustomProgressBar extends View {
         this.mProgressVisibility = mProgressVisibility;
         postInvalidate();
     }
+    
+
+    /**
+     * This is detect when mButtonRegion is clicked. Which means
+     * play/pause action happened.
+     *
+     * @param event
+     * @return
+     */
+    /**根据点击的点,计算当前的进度--->
+     * @param x
+     * @param y
+     * @return
+     */
+    public int calculateNowProgress(float x, float y) {
+    	double dy = y-rectF.centerY();
+    	double dx = x-rectF.centerX();
+    	double temp2 = (double)Math.abs(dy) / Math.abs(dx);
+    	double tan = Math.atan(temp2); //获取弧度角(第一象限)
+    	float jiaodu = (float) (180*tan/3.14);
+    	//下面的所有象限都是基于手机坐标系的(y轴向下)
+    	if(dx>0) { //android系统的1,4象限
+    		if(dy>0) {  //1象限
+    			
+    		}else { //4象限
+    			jiaodu = 360-jiaodu;
+    		}
+    	}else {//2,3
+    		if(dy>0) { //2象限
+    			jiaodu = 180 - jiaodu;
+    		}else { //3象限
+    			jiaodu+=180;
+    		}
+    	}
+ 
+    	jiaodu -= 145;  //因为起始角度为145度,所以这里做一个变化
+    	if(jiaodu < 0) {
+    		jiaodu = 360 - Math.abs(jiaodu);
+    	}
+    	LogUtil.v("MusicPlayerService", "CircleProgressBar--->角度:"+jiaodu);
+    	//计算当前progress:
+    	return (int) (jiaodu * maxProgress / 360);
+    }
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+    	LogUtil.v("MusicPlayerService", "CircleProgressBar--->onTouchEvent"+event.getAction());
+        float x = event.getX();
+        float y = event.getY();
+        
+        
+        
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN: 
+            	downX = x;
+            	downY = y;
+            	//平方和
+                float temp = (x-rectF.centerX())*(x-rectF.centerX());
+            	temp += ((y-rectF.centerY())*(y-rectF.centerY())); //temp = dx*dx+dy*dy
+            	double tempR = Math.sqrt(temp);
+            	if(tempR <= downMaxR && tempR >= downMinR) {//按下的位置在有效范围内
+            		LogUtil.v("MusicPlayerService", "CircleProgressBar--->valid down----->");
+            		isDown = true;
+            		mPaintProgressLoaded.setColor(Color.parseColor("#993333"));
+            		postInvalidate();
+            	}
+            	break;
+            case MotionEvent.ACTION_MOVE:
+            	if(!isDown) break;  //down的位置无效,不处理move事件了
+            	if(!isDraging) {
+            		if(Math.abs(downX-x)>20 || Math.abs(downY-y)>20) {
+                		isDraging = true;
+                	}else {
+                		break;
+                	}
+            	}
+            		
+            	//处理drag事件
+            	currentProgress = calculateNowProgress(x, y);
+            	postInvalidate();
+            	if(this.dragListener != null) {
+            		dragListener.onDrag(currentProgress);  //回调
+            		LogUtil.v("MusicPlayerService", "CircleProgressBar---->onDrag()");
+            	}
+            	
+            	break;
+            case MotionEvent.ACTION_UP:
+            	mPaintProgressLoaded.setColor(mProgressLoadedColor); //恢复进度条的颜色
+            	if(!isDown) break;  //down的位置不对,不处理up事件了
+            	if(!isDraging) { //没有拖动--->触发onClick点击事件
+            		currentProgress = calculateNowProgress(x, y);
+            		if(this.dragListener != null) {
+            			dragListener.onClick(currentProgress); //回调
+            			LogUtil.v("MusicPlayerService", "CircleProgressBar---->onClick()");
+            		}
+            	}
+            	isDown = false;
+            	isDraging = false;
+            	postInvalidate();
+            	break;
+            case MotionEvent.ACTION_CANCEL:
+            	mPaintProgressLoaded.setColor(mProgressLoadedColor); //恢复进度条的颜色
+            	postInvalidate();
+            	break;
+        }
+
+        return super.onTouchEvent(event);
+    }
+    
+    /**拖动进度条时的回调监听
+	 * @author JonsonMarxy
+	 *
+	 */
+	public interface OnCircleProgressBarDragListener {
+		/**
+		 * @param progress 拖拽的位置
+		 */
+		public abstract void onDrag(int progress);
+		public abstract void onClick(int progress);
+	}
+	
+	public void setOnDragListener(OnCircleProgressBarDragListener dragListener) {
+		this.dragListener = dragListener;
+	}
+    
 }

@@ -2,11 +2,12 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent" 
-    android:background="#000">
+    android:background="#0000">
 
-     <com.ckt.ui.CustomProgressBar
+      <com.ckt.ui.CustomProgressBar
 	     android:id="@+id/circle_pro"
 	     android:layout_centerHorizontal="true"
+	     android:clickable="true"
 	     android:layout_width="250dp"
 	     android:layout_marginTop="60dip"
 	     android:layout_height="250dp"/>

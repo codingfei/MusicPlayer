@@ -9,6 +9,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.util.Log;
 import android.widget.RemoteViews;
 
 import com.ckt.modle.Mp3Info;
@@ -24,7 +25,7 @@ public class NotificationUtils {
 	public static final int NOTIFICATION_NEXT=903;
 	public static final int NOTIFICATION_CANEL=904;//点击了通知栏的  x
 	
-	private static Notificationreciver notificationreciver;
+	private static Notificationreciver notificationreciver=null;
 	
 	public static final String Broadcast_INTENT_ACTION = "tongzhilanxiangying";
 	public static final String Broadcast_INTENT_EXTRA_DATA = "data"; 
@@ -47,8 +48,10 @@ public class NotificationUtils {
 				.setSmallIcon(R.drawable.logo).setAutoCancel(false).build();
         notification.flags=Notification.FLAG_NO_CLEAR;
         //设置视图
-		if(isPlay) 	rv.setImageViewResource(R.id.playbtn, R.drawable.notification_music_play);
-		else		rv.setImageViewResource(R.id.playbtn, R.drawable.notification_music_pause);
+		if(isPlay) 	
+			rv.setImageViewResource(R.id.playbtn, R.drawable.notification_music_play);
+		else		
+			rv.setImageViewResource(R.id.playbtn, R.drawable.notification_music_pause);
 		String info = mp3Info.getName() + "-" + mp3Info.getArtistName();
 		String ss [] = info.split("-");
 		try {
@@ -94,8 +97,7 @@ public class NotificationUtils {
 			e.printStackTrace();
 		}
 		
-		IntentFilter ifr = new IntentFilter();
-		ifr.addAction("asd");
+		IntentFilter ifr = new IntentFilter("asd");
 		context.registerReceiver(notificationreciver, ifr);
 
         //把定义的notification 传递给 notificationmanager 显示通知  
@@ -129,7 +131,8 @@ public class NotificationUtils {
 		public void onReceive(Context context, Intent intent) {
 			// TODO Auto-generated method stub
 			int s = intent.getIntExtra("Infor", 0);
-			
+//			Log.v("MusicPlayerService", "Notificationreciver");
+//			System.out.println("Notificationreciver");
 			//向service发送广播
 			Intent it = new Intent(Broadcast_INTENT_ACTION);
 			switch (s) {  //下面用到的一些常量都是在本类开头定义的,可以自行修改

@@ -83,7 +83,7 @@
         android:layout_weight="2"
         android:orientation="vertical" >
 
-       <SeekBar 
+      <SeekBar 
                 android:id="@+id/voice_seekbar"
                 android:layout_centerHorizontal="true"
                 android:layout_marginLeft="20dp"
@@ -92,9 +92,12 @@
                 android:layout_width="match_parent"
                 android:maxHeight="5dp"
                 android:max="100"
+                android:paddingLeft="20dp"
+                android:paddingRight="20dp"
+                android:thumbOffset="20dp"
                 android:progressDrawable="@drawable/seek_bar_bg"
                 android:thumb="@drawable/seekbar_thumb"
-                android:progress="30"
+                android:progress="0"
                 />
 
         <LinearLayout 

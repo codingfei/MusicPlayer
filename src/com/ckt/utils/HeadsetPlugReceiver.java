@@ -3,7 +3,6 @@ package com.ckt.utils;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.media.MediaPlayer;
 import android.widget.Toast;
 
 public class HeadsetPlugReceiver extends BroadcastReceiver {
