@@ -5,13 +5,10 @@ import java.util.ArrayList;
 import android.animation.ValueAnimator;
 import android.animation.ValueAnimator.AnimatorUpdateListener;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.FragmentManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
@@ -28,20 +25,17 @@ import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.util.Log;
+import android.os.Message;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.animation.LinearInterpolator;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
-import android.widget.Toast;
 
-import com.ckt.modle.LogUtil;
 import com.ckt.modle.Mp3Info;
 import com.ckt.ui.CustomProgressBar;
 import com.ckt.ui.CustomProgressBar.OnCircleProgressBarDragListener;
@@ -60,7 +54,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
 
 	private ImageButton pre_but;
 
-//	private ImageButton menu_but;
+	// private ImageButton menu_but;
 	// cd与中间镂空控件
 	private ImageView cd_view = null;
 	private ImageView center_view = null;
@@ -76,6 +70,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
 	private boolean isUserChangingVoice = false; // 表示当前是否是我们自己在改变音量--->这个时候就不要理会系统音量改变的广播了,不然会出现一些小问题
 	private AudioManager mAudioManager = null; // Audio管理器，用了控制音量
 	private MyVolumeReceiver myVolumeReceiver;
+	private HeadsetPlugReceiver headsetPlugReceiver;
 	private ArrayList<Mp3Info> musicList; // 音乐列表
 	public int currentSong = 0;
 	private ValueAnimator valueAnimator = null;
@@ -83,7 +78,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
 	private boolean isChange = false;
 	private Handler handler = new Handler();
 	private Handler matchHandler = new Handler() {
-		public void handleMessage(android.os.Message msg) {
+		public void handleMessage(Message msg) {
 
 			switch (msg.what) {
 			case 1:
@@ -102,7 +97,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
 			}
 		};
 	};
-	private int state = 1;
+	private int state = 0;
 	private FeatureFragment featureFragment = null;
 	private CDFragment cdFragment = null;
 	private Bitmap bit = null;
@@ -114,12 +109,9 @@ public class MainActivity extends Activity implements View.OnClickListener,
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
-		if(isScreenOriatationPortrait())
-		{
+		if (isScreenOriatationPortrait()) {
 			setContentView(R.layout.activity_main);
-		}
-		else
-		{
+		} else {
 			setContentView(R.layout.activity_main_land);
 		}
 
@@ -145,8 +137,8 @@ public class MainActivity extends Activity implements View.OnClickListener,
 		list_but = (ImageButton) findViewById(R.id.list_btn);
 		list_but.setOnClickListener(this);
 		// ---关闭按钮---//
-//		menu_but = (ImageButton) findViewById(R.id.menu_btn);
-//		menu_but.setOnClickListener(this);
+		// menu_but = (ImageButton) findViewById(R.id.menu_btn);
+		// menu_but.setOnClickListener(this);
 		seekbar_voice = (SeekBar) findViewById(R.id.voice_seekbar);
 		play_but.setOnClickListener(this);
 		bit = BitmapFactory.decodeResource(getResources(), R.drawable.wangfei);
@@ -194,6 +186,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
 								.getAnimatedValue() + value);
 					}
 				});
+		registerHeadsetPlugReceiver();
 	}
 
 	@Override
@@ -206,7 +199,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
 			Mp3Info mp3 = (Mp3Info) mBinder.getMusicList().get(index);
 			mBinder.setCurrentMusic(mp3);
 			currentSong = musicList.indexOf(mp3);
-			mBinder.playOrPauseMusic(mPlayer, mp3,true);
+			mBinder.playOrPauseMusic(mPlayer, mp3, true);
 			play_but.setImageResource(R.drawable.widget_music_btn_pause_normal);
 		}
 
@@ -226,9 +219,8 @@ public class MainActivity extends Activity implements View.OnClickListener,
 			break;
 
 		case R.id.play_btn:
-			mp3 =mBinder.getCurrentMusic();
-			Log.i("message", "isChange---------" + isChange);
-			mBinder.playOrPauseMusic(mPlayer, mp3,isChange);
+			mp3 = mBinder.getCurrentMusic();
+			mBinder.playOrPauseMusic(mPlayer, mp3, isChange);
 			isChange = false;
 			circle_progress.setMax((int) mp3.getDuring()); // 设置进度条的最大值
 			startUpdatePlaingProgress(); // 开始更新进度条(handle里面更新哦)
@@ -242,30 +234,39 @@ public class MainActivity extends Activity implements View.OnClickListener,
 				stopUpdatePlayingProgress();
 				play_but.setImageResource(R.drawable.widget_music_btn_play_normal);
 			}
-			postMessagetoFeatureFragment(currentSong);
+			postMessagetoFeatureFragment(musicList.indexOf(mp3));
 			break;
 		case R.id.next_btn:
-			mp3 =mBinder.getCurrentMusic();
 			mBinder.playNextMusic(MusicPlayerService.PLAYORDER_ORDER);
-			int temp = currentSong;
-			currentSong = (currentSong + 1) < musicList.size() ? (currentSong + 1)
-					: musicList.size() - 1;
-			postMessagetoFeatureFragment(currentSong);
-			if(temp!=currentSong)
-			isChange=true;
+			mp3 = mBinder.getCurrentMusic();
+			postMessagetoFeatureFragment(musicList.indexOf(mp3));
+			if(state<2)
+			isChange = true;
+			else 
+			{
+				state = 1;
+				isChange = false;
+			}
+			state++;
 			break;
-		case R.id.pre_btn:
-			mp3 =mBinder.getCurrentMusic();
+		case R.id.pre_btn:	
 			mBinder.playPreviousMusic(MusicPlayerService.PLAYORDER_ORDER);
-			int temp1 = currentSong;
-			currentSong = currentSong - 1 >= 0 ? currentSong - 1 : 0;
-			postMessagetoFeatureFragment(currentSong);
-			if(temp1!=currentSong)
-			isChange=true;
+			mp3 = mBinder.getCurrentMusic();
+			postMessagetoFeatureFragment(musicList.indexOf(mp3));
+			if(state<2)
+			isChange = true;
+			else 
+			{
+				state = 1;
+				isChange = false;
+			}
+			state++;
 			break;
 		default:
 			break;
 		}
+		NotificationUtils.show(this, mPlayer.isPlaying(),
+			mBinder.getCurrentMusic());
 	}
 
 	/**
@@ -353,6 +354,14 @@ public class MainActivity extends Activity implements View.OnClickListener,
 
 	}
 
+	private void registerHeadsetPlugReceiver() {
+		headsetPlugReceiver = new HeadsetPlugReceiver();
+		IntentFilter filter = new IntentFilter(
+				AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+		filter.addAction("android.intent.action.HEADSET_PLUG");
+		registerReceiver(headsetPlugReceiver, filter);
+	}
+
 	public void postMessagetoFeatureFragment(int index) {
 		if (index >= 0 && index < musicList.size()) {
 			FragmentManager manager = getFragmentManager();
@@ -367,7 +376,6 @@ public class MainActivity extends Activity implements View.OnClickListener,
 			}
 
 			featureFragment.songName.setText(musicList.get(index).getName());
-			Log.i("test", "postMessage" + musicList.get(index).getName());
 			featureFragment.cdName.setText(musicList.get(index).getAlbum_art());
 			featureFragment.singerName.setText(musicList.get(index)
 					.getArtistName());
@@ -377,7 +385,6 @@ public class MainActivity extends Activity implements View.OnClickListener,
 	@Override
 	public void onServiceDisconnected(ComponentName name) {
 		// TODO Auto-generated method stub
-		LogUtil.v("MainActivity", "onServiceDisconnected");
 	}
 
 	@Override
@@ -415,7 +422,9 @@ public class MainActivity extends Activity implements View.OnClickListener,
 	protected void onDestroy() {
 		// TODO Auto-generated method stub
 		super.onDestroy();
+		NotificationUtils.close(getApplicationContext());
 		unbindService(this);
+		unregisterReceiver(headsetPlugReceiver);
 		stopUpdatePlayingProgress();
 		pauseRoateCDView();
 	}
@@ -432,6 +441,9 @@ public class MainActivity extends Activity implements View.OnClickListener,
 			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
 					AudioManager.ADJUST_LOWER, AudioManager.FLAG_PLAY_SOUND);
 			return true;
+		case KeyEvent.KEYCODE_BACK:
+			moveTaskToBack(false);
+			break;
 
 		default:
 			break;
@@ -488,21 +500,44 @@ public class MainActivity extends Activity implements View.OnClickListener,
 		}
 	}
 
+	public class HeadsetPlugReceiver extends BroadcastReceiver {
+
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			// TODO Auto-generated method stub
+			if (intent.hasExtra("state")) {
+				if (intent.getIntExtra("state", 0) == 0) {
+					if(mPlayer != null)
+					{
+					pauseRoateCDView();
+					stopUpdatePlayingProgress();
+					
+					mPlayer.pause();
+					play_but.setImageResource(R.drawable.widget_music_btn_play_normal);
+					postMessagetoFeatureFragment(currentSong);
+					}
+				} else if (intent.getIntExtra("state", 0) == 1) {
+					startRoateCDView();
+			
+				}
+			}
+		}
+
+	}
+
 	@Override
 	public void onDrag(int progress) {
 		// TODO Auto-generated method stub
 		mPlayer.seekTo(progress);
-		LogUtil.v("MusicPlayerService", "public void onDrag(int progress)");
 	}
 
 	@Override
 	public void onClick(int progress) {
 		// TODO Auto-generated method stub
 		mPlayer.seekTo(progress);
-		LogUtil.v("MusicPlayerService", "public void onClick(int progress)");
 	}
-	
+
 	public boolean isScreenOriatationPortrait() {
-		 return getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
-		 }
+		return getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+	}
 }

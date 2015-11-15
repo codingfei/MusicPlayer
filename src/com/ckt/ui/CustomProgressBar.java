@@ -19,6 +19,7 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import com.ckt.modle.LogUtil;
+import com.ckt.musicplayer.MainActivity;
 
 
 
@@ -408,8 +409,8 @@ public class CustomProgressBar extends View {
         createShader();
         
         //计算一下点击事件有效的范围
-        downMaxR = rectF.width()/2+mPaintProgressEmpty.getStrokeWidth()+15;
-        downMinR = rectF.width()/2-30;
+        downMaxR = rectF.width()/2+mPaintProgressEmpty.getStrokeWidth()+MainActivity.dipTopx(getContext(), 20);
+        downMinR = rectF.width()/2-MainActivity.dipTopx(getContext(), 20);
 
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }

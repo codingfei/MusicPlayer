@@ -13,6 +13,7 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.ckt.modle.Mp3Info;
+import com.ckt.utils.NotificationUtils;
 
 public class FeatureFragment extends Fragment{
 	public TextView songName = null;
@@ -39,12 +40,16 @@ public class FeatureFragment extends Fragment{
 					@Override
 					public void onClick(DialogInterface arg0, int arg1) {
 						// TODO Auto-generated method stub
-						// 关闭MainActivity
-						getActivity().finish();
+						
 						// 终止服务
 						Intent stopServiceIntent = new Intent(getActivity(),
 								MusicPlayerService.class);
 						getActivity().stopService(stopServiceIntent);
+						
+						// 关闭MainActivity
+						MainActivity activity = (MainActivity) getActivity();
+						NotificationUtils.close(activity);
+						activity.finish();
 					}
 				}).setNegativeButton("NO", null).show();
 			}

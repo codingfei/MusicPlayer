@@ -39,7 +39,11 @@ public class NotificationUtils {
 	public static void show(Context context, boolean isPlay, Mp3Info mp3Info) {
 		
 		mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-		if(notificationreciver==null)	notificationreciver = new Notificationreciver();
+		if(notificationreciver==null)	{
+			notificationreciver = new Notificationreciver();
+			IntentFilter ifr = new IntentFilter("asd");
+			context.registerReceiver(notificationreciver, ifr);
+		}
 		
 		//自定义界面   
         final RemoteViews rv = new RemoteViews(context.getPackageName(), R.layout.notification_view); 
@@ -81,8 +85,7 @@ public class NotificationUtils {
 		btnit2.putExtra("Infor", 3);
 		PendingIntent pt3 = PendingIntent.getBroadcast(context, 3, btnit2,
 				PendingIntent.FLAG_UPDATE_CURRENT);
-		rv.setOnClickPendingIntent(R.id.nextbtn, pt3);
-		
+		rv.setOnClickPendingIntent(R.id.nextbtn, pt3);	
 		
 		//点击通知栏---->Activity
 		try {
@@ -98,8 +101,7 @@ public class NotificationUtils {
 			e.printStackTrace();
 		}
 		
-		IntentFilter ifr = new IntentFilter("asd");
-		context.registerReceiver(notificationreciver, ifr);
+		
 
         //把定义的notification 传递给 notificationmanager 显示通知  
         mNotificationManager.notify(1008611, notification);

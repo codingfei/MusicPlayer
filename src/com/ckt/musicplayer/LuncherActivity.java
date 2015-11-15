@@ -21,6 +21,6 @@ public class LuncherActivity extends Activity {
 			    LuncherActivity.this.finish();
 			}
 
-			}, 2500);
+			}, 1000);
 	}
 }

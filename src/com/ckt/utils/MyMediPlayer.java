@@ -6,7 +6,7 @@ import android.media.MediaPlayer;
 import android.os.Handler;
 
 public class MyMediPlayer extends MediaPlayer{
-	public static final int TIME = 2000; //声音渐变的总时间
+	public static final int TIME = 1000; //声音渐变的总时间
 	public static final int DELAY = 50; //声音渐变的间隔时间
 	private Handler handler;
 	private Runnable runnable;

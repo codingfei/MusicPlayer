@@ -22,7 +22,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.ckt.modle.Mp3Info;
-import com.ckt.utils.HeadsetPlugReceiver;
 import com.ckt.utils.JsonUtils;
 import com.ckt.utils.Mp3FileUtil;
 import com.ckt.utils.SensorUtils;
@@ -35,7 +34,7 @@ public class ShowSongActivity extends Activity implements OnItemClickListener{
 	private MyListViewAdapter adapter;
 	
 	private SensorBroadcastReciver sensorBroadcastReciver;
-	private HeadsetPlugReceiver headsetPlugReceiver; 
+//	private HeadsetPlugReceiver headsetPlugReceiver; 
 	private MediaPlayer mp =null;
 
 	public static final int RESULT_CODE = 10086;
@@ -71,7 +70,7 @@ public class ShowSongActivity extends Activity implements OnItemClickListener{
 		//接收摇一摇广播的接收器---->动态是因为程序退出后不想继续接收这个广播
 		sensorBroadcastReciver = new SensorBroadcastReciver();
 		registerReceiver(sensorBroadcastReciver, new IntentFilter(SensorUtils.BROADCAST_ACTION));
-		registerHeadsetPlugReceiver();
+//		registerHeadsetPlugReceiver();
 		//开启摇一摇功能:
 		SensorUtils.setAccelerateSensor(this);
 	}
@@ -80,22 +79,20 @@ public class ShowSongActivity extends Activity implements OnItemClickListener{
 	@Override
 	public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
 		// TODO Auto-generated method stub
-		Mp3Info tempMp3Info = musicList.get(position);
-		
-		registerHeadsetPlugReceiver();  //这是什么?????
-		
+		Mp3Info tempMp3Info = musicList.get(position);	
+//		registerHeadsetPlugReceiver();  		
 		Intent data = new Intent();
 		data.putExtra("position", position);
-		setResult(RESULT_CODE, data);  //在MainActivity里的onActivityResult()里面接收
+		setResult(RESULT_CODE, data); 
 		finish();
 	}
 	
-	  private void registerHeadsetPlugReceiver(){  
-	        headsetPlugReceiver  = new HeadsetPlugReceiver ();  
-	        IntentFilter  filter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);  
-	        filter.addAction("android.intent.action.HEADSET_PLUG");
-	        registerReceiver(headsetPlugReceiver, filter);  
-	    }  
+//	  private void registerHeadsetPlugReceiver(){  
+//	        headsetPlugReceiver  = new HeadsetPlugReceiver ();  
+//	        IntentFilter  filter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);  
+//	        filter.addAction("android.intent.action.HEADSET_PLUG");
+//	        registerReceiver(headsetPlugReceiver, filter);  
+//	    }  
 
 
 	@Override
@@ -111,7 +108,7 @@ public class ShowSongActivity extends Activity implements OnItemClickListener{
 		// TODO Auto-generated method stub
 		//取消掉动态注册的广播接收器,不然会报错的哦
 		unregisterReceiver(sensorBroadcastReciver);
-		unregisterReceiver(headsetPlugReceiver);
+//		unregisterReceiver(headsetPlugReceiver);
 		//取消摇一摇功能
 		SensorUtils.cancelSensor();
 		super.onDestroy();
@@ -187,8 +184,5 @@ public class ShowSongActivity extends Activity implements OnItemClickListener{
 		
 	}
 
-	private void unregisterReceiver(){  
-	    this.unregisterReceiver(headsetPlugReceiver);  
-	}  
 
 }

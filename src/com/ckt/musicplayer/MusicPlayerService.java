@@ -3,7 +3,6 @@ package com.ckt.musicplayer;
 import java.util.List;
 
 import android.app.Activity;
-import android.app.Notification;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -18,7 +17,6 @@ import android.os.IBinder;
 import android.os.Message;
 import android.util.Log;
 
-import com.ckt.modle.LogUtil;
 import com.ckt.modle.Mp3Info;
 import com.ckt.utils.Mp3FileUtil;
 import com.ckt.utils.MyMediPlayer;
@@ -110,10 +108,9 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 			case PLAYORDER_ORDER:
 				//获取当前模式上一首歌的信息
 				mp3Current =getPreviousMusicByOrder();
-				if(mPlayer.isPlaying())
-				{
-					playOrPauseMusic(mPlayer, mp3Current,true);
-				}
+				
+				playOrPauseMusic(mPlayer, mp3Current,true);
+				
 				break;
 			case PLAYORDER_LOOP:
 				
@@ -122,7 +119,6 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 				
 				break;
 			case PLAYORDER_SINGLE:
-//				musicIsPrepared = false;
 				playOrPauseMusic(mPlayer,mp3Current,true);
 				break;
 			default:
@@ -140,14 +136,9 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 				//获取当前模式下下一首歌的信息
 				mp3Current=getNextMusicByOrder();
 				
-				if(mPlayer.isPlaying())
-				{
+			
 					playOrPauseMusic(mPlayer, mp3Current,true);
-				}
-				else
-				{
-					
-				}
+			
 				break;
 			case PLAYORDER_LOOP:
 				
@@ -164,6 +155,7 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 	
 			//判断这首歌是否已经加载过了
 			if (isChange) {
+				Log.i("message", "isChange++++++++++++++");
 				try {
 					musicPlayer.reset();
 					musicPlayer.setDataSource(mp3.getPath());
@@ -172,14 +164,11 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 					e.printStackTrace();
 				} 		
 				mp3Current = mp3;
-//				musicIsPrepared = true;	
 			}
 			//设置音乐暂停与播放
 			if (musicPlayer.isPlaying()) {
-				musicPlayer.pause();
-				Log.i("message","pause++++++++++++++++playOrPauseMusic");
+				musicPlayer.pause();		
 			}else {
-				Log.i("message","start++++++++++++++++playOrPauseMusic");
 				musicPlayer.start();
 			}
 		}
@@ -190,20 +179,17 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 
 	@Override
 	public IBinder onBind(Intent intent) {
-		LogUtil.v("MusicPlayerService", "onBind");
 		mp3Current = mp3InfoList.get(0);
 		return mBinder;
 	}
 
 	public Mp3Info getPreviousMusicByOrder() {
 		// 获取当前歌曲的位置
-		int currentIndex =0;
-//		if(mp3Current != null)
+		int currentIndex =mp3InfoList.indexOf(mp3Current);
 		currentIndex = mp3InfoList.indexOf(mp3Current);
-		Log.i("message", currentIndex + "++++++++currentIndex");
-		Log.i("message", mp3Current + "++++++++mp3Current");
 		if (currentIndex > 0) {
 			currentIndex = (currentIndex-1) >0 ?currentIndex-1 : 0;
+			mBinder.setCurrentMusic(mp3InfoList.get(currentIndex));
 			return mp3InfoList.get(currentIndex);
 		} else {
 			return mp3InfoList.get(0);
@@ -215,7 +201,7 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 		int currentIndex = mp3InfoList.indexOf(mp3Current);
 		if (currentIndex<mp3InfoList.size()) {
 			currentIndex  = (currentIndex +1) < mp3InfoList.size() ?  (currentIndex +1): mp3InfoList.size()-1;
-			System.out.println("currentIndex------------------++++++++++++++++"+currentIndex);
+			mBinder.setCurrentMusic(mp3InfoList.get(currentIndex));
 			return mp3InfoList.get(currentIndex);
 		}else {
 			return null;
@@ -232,7 +218,6 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 
 	@Override
 	public void onRebind(Intent intent) {
-		LogUtil.v("MusicPlayerService", "onReBind");
 		super.onRebind(intent);
 	}
 
@@ -244,9 +229,6 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 		mPlayer = new MyMediPlayer(getApplicationContext());
 		playOrder = PLAYORDER_ORDER;
 		mPlayer.setOnCompletionListener(this);
-//		Notification notification = new Notification(R.drawable.ic_launcher,
-//				"Test", System.currentTimeMillis()) {
-//		};
 		//注册通知栏点击事件的广播接收器
 		this.mp3InfoList = Mp3FileUtil.getMp3InfoList(this);
 		IntentFilter filter = new IntentFilter(NotificationUtils.Broadcast_INTENT_ACTION);
@@ -263,22 +245,20 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 			mPlayer.setDataSource(mp3Current.getPath());
 			mPlayer.prepare();
 			mPlayer.seekTo(currentPosition);
-//			musicIsPrepared = true;
 		} catch (Exception e) {
-//			musicIsPrepared = false;
+
 		}
 	}
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		LogUtil.v("MusicPlayerService", "onStartCommand");
-
 		return super.onStartCommand(intent, flags, startId);
 	}
 
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
+//		NotificationUtils.close(getApplicationContext());
 		saveConf();
 		mPlayer.stop();
 		mPlayer.release();
@@ -290,8 +270,6 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 		public void onReceive(Context context, Intent intent) {
 			// TODO Auto-generated method stub
 			int action = intent.getIntExtra(NotificationUtils.Broadcast_INTENT_EXTRA_DATA, -1);
-//			Log.v("MusicPlayerService", "通知栏点击了:"+action);
-//			System.out.println("NotificationClickReciver---->");
 			switch (action) {
 			case NotificationUtils.NOTIFICATION_LAST:  //上一首
 				mBinder.playPreviousMusic(MusicPlayerService.PLAYORDER_ORDER);
@@ -305,7 +283,7 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 				break;
 			case NotificationUtils.NOTIFICATION_PLAY_OR_PAUSE:  //暂停或者播放
 				Mp3Info mp3 = (Mp3Info) mBinder.getMusicList().get(0);
-				mBinder.playOrPauseMusic(mPlayer, mp3,true);
+				mBinder.playOrPauseMusic(mPlayer, mp3,false);
 				if(!mPlayer.isPlaying())
 				{
 					NotificationUtils.show(getApplicationContext(),false,mp3Current);
@@ -323,7 +301,9 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 				{
 					NotificationUtils.show(getApplicationContext(),true,mp3Current);
 				}
+				System.out.println("notification next");
 				break;
+				
 			case NotificationUtils.NOTIFICATION_CANEL:  //点击了通知栏上面的叉叉(X)
 				break;
 			default:
@@ -339,7 +319,6 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 	 * 保存配置到文件
 	 */
 	public void saveConf() {
-		LogUtil.v("MusicPlayerService", "service saveConf()");
 		SharedPreferences mySharedPreferences= getSharedPreferences("fiveMusic", 
 				Activity.MODE_PRIVATE);
 		SharedPreferences.Editor editor = mySharedPreferences.edit();
@@ -348,7 +327,6 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 			if(nowIndex >= 0) {
 				editor.putInt("nowIndex", nowIndex);
 				editor.putInt("currentPosition", mPlayer.getCurrentPosition());
-				LogUtil.v("MusicPlayerService", "mPlayer.getCurrentPosition()"+mPlayer.getCurrentPosition());
 			}
 		} catch (Exception e) {}
 		editor.commit();
@@ -358,12 +336,11 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 	 * 读取配置
 	 */
 	public void readConf() {
-		LogUtil.v("MusicPlayerService", "service readConf()");
 		SharedPreferences mySharedPreferences= getSharedPreferences("fiveMusic", 
 				Activity.MODE_PRIVATE);
 		int nowIndex = mySharedPreferences.getInt("nowIndex", 0); //没有读取到,默认是0
 		mp3Current = mp3InfoList.get(nowIndex);
-		currentPosition = mySharedPreferences.getInt("currentPosition", 20000);
+//		currentPosition = mySharedPreferences.getInt("currentPosition", 20000);
 	}
 
 	@Override
