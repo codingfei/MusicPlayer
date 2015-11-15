@@ -81,7 +81,6 @@ public class ShowSongActivity extends Activity implements OnItemClickListener{
 	public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
 		// TODO Auto-generated method stub
 		Mp3Info tempMp3Info = musicList.get(position);
-		Toast.makeText(this, "你想要播放:"+tempMp3Info.getName()+"?\r\n\r\nno way!!!"+position, Toast.LENGTH_SHORT).show();
 		
 		registerHeadsetPlugReceiver();  //这是什么?????
 		

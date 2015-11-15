@@ -29,7 +29,7 @@ public class NotificationUtils {
 	
 	public static final String Broadcast_INTENT_ACTION = "tongzhilanxiangying";
 	public static final String Broadcast_INTENT_EXTRA_DATA = "data"; 
-	
+	public static NotificationManager mNotificationManager = null;
 	
 	/**显示通知栏
 	 * @param context
@@ -38,14 +38,15 @@ public class NotificationUtils {
 	 */
 	public static void show(Context context, boolean isPlay, Mp3Info mp3Info) {
 		
-		NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE); 
+		mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 		if(notificationreciver==null)	notificationreciver = new Notificationreciver();
 		
 		//自定义界面   
         final RemoteViews rv = new RemoteViews(context.getPackageName(), R.layout.notification_view); 
         //创建通知
-        final Notification notification = new Notification.Builder(context).setTicker("正在播放音乐").setContent(rv)
-				.setSmallIcon(R.drawable.logo).setAutoCancel(false).build();
+       Notification notification = new Notification.Builder(context).setTicker("正在播放音乐").setContent(rv)
+				.setSmallIcon(R.drawable.logo).setAutoCancel(true).build();
+       
         notification.flags=Notification.FLAG_NO_CLEAR;
         //设置视图
 		if(isPlay) 	
@@ -107,7 +108,7 @@ public class NotificationUtils {
 	/**取消通知栏按钮的监听
 	 * @param context
 	 */
-	private static void release(Context context) {
+	public static void release(Context context) {
 		if(notificationreciver!=null)
 			context.unregisterReceiver(notificationreciver);
 	}
@@ -117,8 +118,8 @@ public class NotificationUtils {
 	 */
 	public static void close(Context context) {
 		release(context);
-		NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE); 
-		manager.cancel(1008611);
+		mNotificationManager.cancel(1008611);
+		
 	}
 	 
 	/**接收按钮的点击事件,然后向service发送一个新的广播   ---> 这个广播的接收器,我写在service里面了
@@ -131,8 +132,6 @@ public class NotificationUtils {
 		public void onReceive(Context context, Intent intent) {
 			// TODO Auto-generated method stub
 			int s = intent.getIntExtra("Infor", 0);
-//			Log.v("MusicPlayerService", "Notificationreciver");
-//			System.out.println("Notificationreciver");
 			//向service发送广播
 			Intent it = new Intent(Broadcast_INTENT_ACTION);
 			switch (s) {  //下面用到的一些常量都是在本类开头定义的,可以自行修改

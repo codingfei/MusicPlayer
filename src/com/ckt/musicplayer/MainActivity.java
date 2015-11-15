@@ -5,13 +5,17 @@ import java.util.ArrayList;
 import android.animation.ValueAnimator;
 import android.animation.ValueAnimator.AnimatorUpdateListener;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.FragmentManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -19,7 +23,6 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
@@ -32,15 +35,18 @@ import android.view.Window;
 import android.view.animation.LinearInterpolator;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
+import android.widget.Toast;
 
 import com.ckt.modle.LogUtil;
 import com.ckt.modle.Mp3Info;
 import com.ckt.ui.CustomProgressBar;
 import com.ckt.ui.CustomProgressBar.OnCircleProgressBarDragListener;
 import com.ckt.utils.JsonUtils;
+import com.ckt.utils.NotificationUtils;
 
 public class MainActivity extends Activity implements View.OnClickListener,
 		ServiceConnection, OnSeekBarChangeListener,
@@ -54,7 +60,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
 
 	private ImageButton pre_but;
 
-	private ImageButton menu_but;
+//	private ImageButton menu_but;
 	// cd与中间镂空控件
 	private ImageView cd_view = null;
 	private ImageView center_view = null;
@@ -74,6 +80,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
 	public int currentSong = 0;
 	private ValueAnimator valueAnimator = null;
 	float value = 0;
+	private boolean isChange = false;
 	private Handler handler = new Handler();
 	private Handler matchHandler = new Handler() {
 		public void handleMessage(android.os.Message msg) {
@@ -87,7 +94,9 @@ public class MainActivity extends Activity implements View.OnClickListener,
 				}
 				postMessagetoFeatureFragment((Integer) msg.obj);
 				break;
-
+			case 2:
+				postMessagetoFeatureFragment((Integer) msg.obj);
+				break;
 			default:
 				break;
 			}
@@ -105,7 +114,14 @@ public class MainActivity extends Activity implements View.OnClickListener,
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
-		setContentView(R.layout.activity_main);
+		if(isScreenOriatationPortrait())
+		{
+			setContentView(R.layout.activity_main);
+		}
+		else
+		{
+			setContentView(R.layout.activity_main_land);
+		}
 
 		Intent startServiceIntent = new Intent(this, MusicPlayerService.class);
 		startService(startServiceIntent);
@@ -129,8 +145,8 @@ public class MainActivity extends Activity implements View.OnClickListener,
 		list_but = (ImageButton) findViewById(R.id.list_btn);
 		list_but.setOnClickListener(this);
 		// ---关闭按钮---//
-		menu_but = (ImageButton) findViewById(R.id.menu_btn);
-		menu_but.setOnClickListener(this);
+//		menu_but = (ImageButton) findViewById(R.id.menu_btn);
+//		menu_but.setOnClickListener(this);
 		seekbar_voice = (SeekBar) findViewById(R.id.voice_seekbar);
 		play_but.setOnClickListener(this);
 		bit = BitmapFactory.decodeResource(getResources(), R.drawable.wangfei);
@@ -185,12 +201,12 @@ public class MainActivity extends Activity implements View.OnClickListener,
 		if (resultCode == ShowSongActivity.RESULT_CODE) { // 返回了点击的歌曲的index
 			int index = data.getIntExtra("position", -1);
 			if (index >= 0) {// 这里面做相关的响应---->播放第index首歌
-				LogUtil.v("MusicPlayerService", "用户点击播放:" + index);
 				postMessagetoFeatureFragment(index);
 			}
 			Mp3Info mp3 = (Mp3Info) mBinder.getMusicList().get(index);
-			Log.i("test", index + "");
-			mBinder.playOrPauseMusic(mPlayer, mp3, true);
+			mBinder.setCurrentMusic(mp3);
+			currentSong = musicList.indexOf(mp3);
+			mBinder.playOrPauseMusic(mPlayer, mp3,true);
 			play_but.setImageResource(R.drawable.widget_music_btn_pause_normal);
 		}
 
@@ -199,21 +215,21 @@ public class MainActivity extends Activity implements View.OnClickListener,
 	@Override
 	public void onClick(View v) {
 		// TODO Auto-generated method stub
-		Mp3Info mp3 = mBinder.getCurrentMusic();
+		Mp3Info mp3 = null;
 		switch (v.getId()) {
 		// 打开歌曲列表
 		case R.id.list_btn:
 			Intent intent = new Intent(MainActivity.this,
 					ShowSongActivity.class);
 			intent.putExtra("list", JsonUtils.changeListToJsonObj(musicList)); // 启动Activity并把歌曲列表传过去
-			// Toast.makeText(this, musicList+"", Toast.LENGTH_LONG).show();
 			startActivityForResult(intent, 1111); // 这里要用startActivityForResult
 			break;
 
 		case R.id.play_btn:
-			// 播放CD旋转动画
-
-			mBinder.playOrPauseMusic(mPlayer, mp3, false);
+			mp3 =mBinder.getCurrentMusic();
+			Log.i("message", "isChange---------" + isChange);
+			mBinder.playOrPauseMusic(mPlayer, mp3,isChange);
+			isChange = false;
 			circle_progress.setMax((int) mp3.getDuring()); // 设置进度条的最大值
 			startUpdatePlaingProgress(); // 开始更新进度条(handle里面更新哦)
 			// 播放音乐
@@ -222,7 +238,6 @@ public class MainActivity extends Activity implements View.OnClickListener,
 				startUpdatePlaingProgress();
 				play_but.setImageResource(R.drawable.widget_music_btn_pause_normal);
 			} else {
-				System.out.println("pauseRoateCDView");
 				pauseRoateCDView();
 				stopUpdatePlayingProgress();
 				play_but.setImageResource(R.drawable.widget_music_btn_play_normal);
@@ -230,26 +245,23 @@ public class MainActivity extends Activity implements View.OnClickListener,
 			postMessagetoFeatureFragment(currentSong);
 			break;
 		case R.id.next_btn:
+			mp3 =mBinder.getCurrentMusic();
 			mBinder.playNextMusic(MusicPlayerService.PLAYORDER_ORDER);
+			int temp = currentSong;
 			currentSong = (currentSong + 1) < musicList.size() ? (currentSong + 1)
 					: musicList.size() - 1;
 			postMessagetoFeatureFragment(currentSong);
-			Log.i("test", "next" + currentSong);
+			if(temp!=currentSong)
+			isChange=true;
 			break;
 		case R.id.pre_btn:
+			mp3 =mBinder.getCurrentMusic();
 			mBinder.playPreviousMusic(MusicPlayerService.PLAYORDER_ORDER);
+			int temp1 = currentSong;
 			currentSong = currentSong - 1 >= 0 ? currentSong - 1 : 0;
 			postMessagetoFeatureFragment(currentSong);
-			Log.i("test", "pre" + currentSong);
-			break;
-		case R.id.menu_btn:
-			// 关闭MainActivity
-			finish();
-			// 终止服务
-			Intent stopServiceIntent = new Intent(this,
-					MusicPlayerService.class);
-			stopService(stopServiceIntent);
-
+			if(temp1!=currentSong)
+			isChange=true;
 			break;
 		default:
 			break;
@@ -342,7 +354,6 @@ public class MainActivity extends Activity implements View.OnClickListener,
 	}
 
 	public void postMessagetoFeatureFragment(int index) {
-		Log.i("test", "postMessage" + index);
 		if (index >= 0 && index < musicList.size()) {
 			FragmentManager manager = getFragmentManager();
 			featureFragment = (FeatureFragment) manager
@@ -404,7 +415,6 @@ public class MainActivity extends Activity implements View.OnClickListener,
 	protected void onDestroy() {
 		// TODO Auto-generated method stub
 		super.onDestroy();
-		unregisterReceiver(myVolumeReceiver);
 		unbindService(this);
 		stopUpdatePlayingProgress();
 		pauseRoateCDView();
@@ -491,4 +501,8 @@ public class MainActivity extends Activity implements View.OnClickListener,
 		mPlayer.seekTo(progress);
 		LogUtil.v("MusicPlayerService", "public void onClick(int progress)");
 	}
+	
+	public boolean isScreenOriatationPortrait() {
+		 return getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+		 }
 }
