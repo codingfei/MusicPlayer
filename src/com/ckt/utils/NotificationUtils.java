@@ -25,8 +25,6 @@ public class NotificationUtils {
 	public static final int NOTIFICATION_NEXT=903;
 	public static final int NOTIFICATION_CANEL=904;//点击了通知栏的  x
 	
-	private static Notificationreciver notificationreciver=null;
-	
 	public static final String Broadcast_INTENT_ACTION = "tongzhilanxiangying";
 	public static final String Broadcast_INTENT_EXTRA_DATA = "data"; 
 	public static NotificationManager mNotificationManager = null;
@@ -39,11 +37,6 @@ public class NotificationUtils {
 	public static void show(Context context, boolean isPlay, Mp3Info mp3Info) {
 		
 		mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-		if(notificationreciver==null)	{
-			notificationreciver = new Notificationreciver();
-			IntentFilter ifr = new IntentFilter("asd");
-			context.registerReceiver(notificationreciver, ifr);
-		}
 		
 		//自定义界面   
         final RemoteViews rv = new RemoteViews(context.getPackageName(), R.layout.notification_view); 
@@ -57,8 +50,11 @@ public class NotificationUtils {
 			rv.setImageViewResource(R.id.playbtn, R.drawable.notification_music_play);
 		else		
 			rv.setImageViewResource(R.id.playbtn, R.drawable.notification_music_pause);
+		if(mp3Info != null)
+		{
 		String info = mp3Info.getName() + "-" + mp3Info.getArtistName();
 		String ss [] = info.split("-");
+		
 		try {
 			rv.setTextViewText(R.id.textTitle, ss[0]);
 			rv.setTextViewText(R.id.textArtist, ss[1]);
@@ -67,22 +63,22 @@ public class NotificationUtils {
 			rv.setTextViewText(R.id.textTitle, mp3Info.getName());
 			rv.setTextViewText(R.id.textArtist, mp3Info.getArtistName());
 		}
-        
+		}
 		//注册通知栏按钮的点击监听
-		Intent btnit = new Intent("asd");
-		btnit.putExtra("Infor", 1);
+		Intent btnit = new Intent(Broadcast_INTENT_ACTION);
+		btnit.putExtra(Broadcast_INTENT_EXTRA_DATA, NOTIFICATION_LAST);
 		PendingIntent pt1 = PendingIntent.getBroadcast(context, 1, btnit,
 				PendingIntent.FLAG_UPDATE_CURRENT);
 		rv.setOnClickPendingIntent(R.id.previousbtn, pt1);
 
-		Intent btnit1 = new Intent("asd");
-		btnit1.putExtra("Infor", 2);
+		Intent btnit1 = new Intent(Broadcast_INTENT_ACTION);
+		btnit1.putExtra(Broadcast_INTENT_EXTRA_DATA, NOTIFICATION_PLAY_OR_PAUSE);
 		PendingIntent pt2 = PendingIntent.getBroadcast(context, 2, btnit1,
 				PendingIntent.FLAG_UPDATE_CURRENT);
 		rv.setOnClickPendingIntent(R.id.playbtn, pt2);
 
-		Intent btnit2 = new Intent("asd");
-		btnit2.putExtra("Infor", 3);
+		Intent btnit2 = new Intent(Broadcast_INTENT_ACTION);
+		btnit2.putExtra(Broadcast_INTENT_EXTRA_DATA, NOTIFICATION_NEXT);
 		PendingIntent pt3 = PendingIntent.getBroadcast(context, 3, btnit2,
 				PendingIntent.FLAG_UPDATE_CURRENT);
 		rv.setOnClickPendingIntent(R.id.nextbtn, pt3);	
@@ -101,56 +97,15 @@ public class NotificationUtils {
 			e.printStackTrace();
 		}
 		
-		
-
         //把定义的notification 传递给 notificationmanager 显示通知  
         mNotificationManager.notify(1008611, notification);
-	}
-	
-	/**取消通知栏按钮的监听
-	 * @param context
-	 */
-	public static void release(Context context) {
-		if(notificationreciver!=null)
-			context.unregisterReceiver(notificationreciver);
 	}
 	
 	/**关闭通知栏
 	 * @param context
 	 */
 	public static void close(Context context) {
-		release(context);
 		mNotificationManager.cancel(1008611);
-		
 	}
-	 
-	/**接收按钮的点击事件,然后向service发送一个新的广播   ---> 这个广播的接收器,我写在service里面了
-	 * @author JonsonMarxy
-	 *
-	 */
-	static class Notificationreciver extends BroadcastReceiver {
-		
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			// TODO Auto-generated method stub
-			int s = intent.getIntExtra("Infor", 0);
-			//向service发送广播
-			Intent it = new Intent(Broadcast_INTENT_ACTION);
-			switch (s) {  //下面用到的一些常量都是在本类开头定义的,可以自行修改
-			case 1: //last
-				it.putExtra(Broadcast_INTENT_EXTRA_DATA, NOTIFICATION_LAST);
-				break;
-			case 2: //play or pause
-				it.putExtra(Broadcast_INTENT_EXTRA_DATA, NOTIFICATION_PLAY_OR_PAUSE);
-				break;
-			case 3:  //next
-				it.putExtra(Broadcast_INTENT_EXTRA_DATA, NOTIFICATION_NEXT);
-				break;
-				
-			default:
-				break;
-			}
-			context.sendBroadcast(it);
-		}
-	}
+
 }

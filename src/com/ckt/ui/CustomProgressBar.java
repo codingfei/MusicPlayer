@@ -708,7 +708,9 @@ public class CustomProgressBar extends View {
      * @return
      */
     private int calculatePastProgressDegree(){
-        return (360*currentProgress/maxProgress);
+    	int ret = (360*currentProgress/maxProgress);
+        if(ret == 0)	ret+=1;
+        return ret;
     }
 
     /**

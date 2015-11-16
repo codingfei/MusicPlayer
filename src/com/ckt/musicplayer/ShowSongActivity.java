@@ -162,9 +162,12 @@ public class ShowSongActivity extends Activity implements OnItemClickListener{
 			}
 			holder = (ViewHolder) view.getTag();
 			Mp3Info tempMp3 = musicList.get(position);
+			if(tempMp3 !=null)
+			{
 			holder.txt_musicName.setText(tempMp3.getName());
 			holder.txt_artistName.setText(tempMp3.getArtistName());
 			holder.txt_during.setText(Mp3FileUtil.getDuringString(tempMp3.getDuring()));
+			}
 			return view;
 		}
 	}

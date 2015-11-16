@@ -81,17 +81,10 @@ public class MainActivity extends Activity implements View.OnClickListener,
 		public void handleMessage(Message msg) {
 
 			switch (msg.what) {
-			case 1:
-				if (!mPlayer.isPlaying()) {
-					play_but.setImageResource(R.drawable.widget_music_btn_play_normal);
-				} else {
-					play_but.setImageResource(R.drawable.widget_music_btn_pause_normal);
-				}
-				postMessagetoFeatureFragment((Integer) msg.obj);
+			case 1:  //service发来的消息--->更新UI
+				updateUI();
 				break;
-			case 2:
-				postMessagetoFeatureFragment((Integer) msg.obj);
-				break;
+
 			default:
 				break;
 			}
@@ -157,7 +150,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
 		IntentFilter filter = new IntentFilter();
 		filter.addAction("android.media.VOLUME_CHANGED_ACTION");
 		myVolumeReceiver = new MyVolumeReceiver();
-		registerReceiver(new MyVolumeReceiver(), filter);
+		registerReceiver(myVolumeReceiver, filter);
 		// 这个线程是用来更新进度条的哦
 		runnable_changeProgress = new Runnable() {
 
@@ -184,6 +177,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
 						// TODO Auto-generated method stub
 						cd_view.setRotation((Float) animation
 								.getAnimatedValue() + value);
+//						System.out.println("onAnimationUpdate()");
 					}
 				});
 		registerHeadsetPlugReceiver();
@@ -216,47 +210,32 @@ public class MainActivity extends Activity implements View.OnClickListener,
 					ShowSongActivity.class);
 			intent.putExtra("list", JsonUtils.changeListToJsonObj(musicList)); // 启动Activity并把歌曲列表传过去
 			startActivityForResult(intent, 1111); // 这里要用startActivityForResult
-			break;
+			return;
 
 		case R.id.play_btn:
 			mp3 = mBinder.getCurrentMusic();
 			mBinder.playOrPauseMusic(mPlayer, mp3, isChange);
 			isChange = false;
-			circle_progress.setMax((int) mp3.getDuring()); // 设置进度条的最大值
-			startUpdatePlaingProgress(); // 开始更新进度条(handle里面更新哦)
-			// 播放音乐
-			if (mPlayer.isPlaying()) {
-				startRoateCDView();
-				startUpdatePlaingProgress();
-				play_but.setImageResource(R.drawable.widget_music_btn_pause_normal);
-			} else {
-				pauseRoateCDView();
-				stopUpdatePlayingProgress();
-				play_but.setImageResource(R.drawable.widget_music_btn_play_normal);
-			}
-			postMessagetoFeatureFragment(musicList.indexOf(mp3));
 			break;
 		case R.id.next_btn:
 			mBinder.playNextMusic(MusicPlayerService.PLAYORDER_ORDER);
 			mp3 = mBinder.getCurrentMusic();
 			postMessagetoFeatureFragment(musicList.indexOf(mp3));
-			if(state<2)
-			isChange = true;
-			else 
-			{
+			if (state < 2)
+				isChange = true;
+			else {
 				state = 1;
 				isChange = false;
 			}
 			state++;
 			break;
-		case R.id.pre_btn:	
+		case R.id.pre_btn:
 			mBinder.playPreviousMusic(MusicPlayerService.PLAYORDER_ORDER);
 			mp3 = mBinder.getCurrentMusic();
 			postMessagetoFeatureFragment(musicList.indexOf(mp3));
-			if(state<2)
-			isChange = true;
-			else 
-			{
+			if (state < 2)
+				isChange = true;
+			else {
 				state = 1;
 				isChange = false;
 			}
@@ -265,8 +244,30 @@ public class MainActivity extends Activity implements View.OnClickListener,
 		default:
 			break;
 		}
-		NotificationUtils.show(this, mPlayer.isPlaying(),
-			mBinder.getCurrentMusic());
+		
+		updateUI();  //更新UI
+		
+	}
+
+	/**
+	 * 更新UI
+	 */
+	public void updateUI() {
+		Mp3Info mp3 = mBinder.getCurrentMusic();
+		// 更新UI
+		if (mPlayer.isPlaying()) {  //在播放
+			startRoateCDView();
+			startUpdatePlaingProgress();// 开始更新进度条(handle里面更新哦)
+			play_but.setImageResource(R.drawable.widget_music_btn_pause_normal);
+			circle_progress.setMax((int) mp3.getDuring()); // 设置进度条的最大值
+		} else {  //没有播放
+			stopUpdatePlayingProgress();  //停止更新进度条
+			pauseRoateCDView();
+			play_but.setImageResource(R.drawable.widget_music_btn_play_normal);
+		}
+		//更新通知栏:
+		NotificationUtils.show(getApplicationContext(), mPlayer.isPlaying(), mBinder.getCurrentMusic());
+		postMessagetoFeatureFragment(musicList.indexOf(mp3));
 	}
 
 	/**
@@ -290,15 +291,18 @@ public class MainActivity extends Activity implements View.OnClickListener,
 	public void startRoateCDView() {
 		if (valueAnimator == null)
 			return;
-		valueAnimator.start();
+		if(!valueAnimator.isStarted()) {
+			valueAnimator.start();
+		}
+		
 	}
 
 	/**
 	 * 暂停旋转CD:
 	 */
 	public void pauseRoateCDView() {
-		if (valueAnimator == null)
-			return;
+		
+		if (valueAnimator == null)	return;
 		valueAnimator.cancel();
 		value = cd_view.getRotation(); // 记录当前旋转的位置,下次接着这里旋转
 	}
@@ -343,11 +347,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
 		}
 
 		// 更新界面:
-		if (mPlayer.isPlaying()) {
-
-			startRoateCDView(); // 开始旋转cdview
-			startUpdatePlaingProgress();
-		}
+		updateUI();
 		// Toast.makeText(this, musicList+"", Toast.LENGTH_LONG).show();
 		// postMessagetoFeatureFragment(currentSong);
 		mBinder.setMatchHandler(matchHandler);
@@ -374,11 +374,13 @@ public class MainActivity extends Activity implements View.OnClickListener,
 				cdFragment.imageView.setBackground(new BitmapDrawable(
 						getCircleBitmap(this, bit, 200)));
 			}
-
+			if(musicList.get(index)!=null)
+			{
 			featureFragment.songName.setText(musicList.get(index).getName());
 			featureFragment.cdName.setText(musicList.get(index).getAlbum_art());
 			featureFragment.singerName.setText(musicList.get(index)
 					.getArtistName());
+			}
 		}
 	}
 
@@ -412,7 +414,6 @@ public class MainActivity extends Activity implements View.OnClickListener,
 			} catch (Exception e) {
 				// TODO: handle exception
 			}
-
 		}
 		super.onResume();
 
@@ -424,8 +425,10 @@ public class MainActivity extends Activity implements View.OnClickListener,
 		super.onDestroy();
 		unbindService(this);
 		unregisterReceiver(headsetPlugReceiver);
+		unregisterReceiver(myVolumeReceiver);
 		stopUpdatePlayingProgress();
 		pauseRoateCDView();
+		NotificationUtils.close(getApplicationContext());
 	}
 
 	@Override
@@ -506,18 +509,16 @@ public class MainActivity extends Activity implements View.OnClickListener,
 			// TODO Auto-generated method stub
 			if (intent.hasExtra("state")) {
 				if (intent.getIntExtra("state", 0) == 0) {
-					if(mPlayer != null)
-					{
-					pauseRoateCDView();
-					stopUpdatePlayingProgress();
-					
-					mPlayer.pause();
-					play_but.setImageResource(R.drawable.widget_music_btn_play_normal);
-					postMessagetoFeatureFragment(currentSong);
+					if (mPlayer != null) {
+						pauseRoateCDView();
+						stopUpdatePlayingProgress();
+
+						mPlayer.pause();
+						play_but.setImageResource(R.drawable.widget_music_btn_play_normal);
+						postMessagetoFeatureFragment(currentSong);
 					}
 				} else if (intent.getIntExtra("state", 0) == 1) {
 					startRoateCDView();
-			
 				}
 			}
 		}
