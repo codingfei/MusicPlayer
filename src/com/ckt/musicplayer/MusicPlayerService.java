@@ -179,6 +179,7 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 
 	@Override
 	public IBinder onBind(Intent intent) {
+		if(mp3InfoList.size()!=0)
 		mp3Current = mp3InfoList.get(0);
 		return mBinder;
 	}
@@ -235,10 +236,13 @@ public class MusicPlayerService extends Service implements OnCompletionListener{
 		registerReceiver(new NotificationClickReciver(), filter);
 				
 				//显示通知栏
-		NotificationUtils.show(getApplicationContext(), false, this.mp3InfoList.get(0));
+		if(mp3InfoList != null && mp3InfoList.size()!=0)
+		{
+			NotificationUtils.show(getApplicationContext(), false, this.mp3InfoList.get(0));
 	
-		mp3InfoList = Mp3FileUtil.getMp3InfoList(getApplicationContext());
-		readConf();//读取当前播放的音乐,以及播放进度,等等
+			mp3InfoList = Mp3FileUtil.getMp3InfoList(getApplicationContext());
+			readConf();//读取当前播放的音乐,以及播放进度,等等
+		}
 		//把当前歌曲加载到mediaPlayer中--->activity会读取
 		try {
 			mPlayer.reset();

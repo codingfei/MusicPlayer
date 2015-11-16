@@ -422,7 +422,6 @@ public class MainActivity extends Activity implements View.OnClickListener,
 	protected void onDestroy() {
 		// TODO Auto-generated method stub
 		super.onDestroy();
-		NotificationUtils.close(getApplicationContext());
 		unbindService(this);
 		unregisterReceiver(headsetPlugReceiver);
 		stopUpdatePlayingProgress();
